@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+backend/venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+
+# Databases and local state
+*.db
+*.sqlite
+backend/conversations.db
+
+# Logs and diagnostics
+*.log
+diag_*.log
+run_*.log
+restart_*.log
+backend/*_out*.log
+backend/*_err*.log
+frontend/dev_server.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local assistant/session artifacts
+.claude/
+nul
+NUL
+backend/NUL

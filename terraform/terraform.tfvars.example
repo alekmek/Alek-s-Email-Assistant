@@ -1,0 +1,24 @@
+project_name           = "voice-email-assistant"
+environment            = "dev"
+aws_region             = "us-west-2"
+vpc_cidr               = "10.42.0.0/16"
+az_count               = 2
+frontend_bucket_name   = ""
+backend_image_uri      = ""
+api_container_port     = 8000
+api_desired_count      = 1
+ecs_task_cpu           = 1024
+ecs_task_memory        = 2048
+frontend_url           = "http://localhost:5173"
+health_check_path      = "/health"
+enable_execute_command = true
+log_retention_days     = 14
+
+# Provider/API credentials (stored into AWS Secrets Manager by Terraform)
+anthropic_api_key   = ""
+nylas_api_key       = ""
+nylas_client_id     = ""
+nylas_client_secret = ""
+nylas_grant_id      = ""
+deepgram_api_key    = ""
+cartesia_api_key    = ""

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <button id="connect">Connect</button>
+    <button id="disconnect">Disconnect</button>
+    <div id="status" style="margin: 20px 0; padding: 10px; background: #eee;">Status: Not connected</div>
+    <div id="log" style="font-family: monospace; white-space: pre-wrap; background: #222; color: #0f0; padding: 20px; height: 400px; overflow-y: auto;"></div>
+
+    <script>
+        let ws = null;
+        const status = document.getElementById('status');
+        const log = document.getElementById('log');
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            log.textContent += `[${time}] ${msg}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        document.getElementById('connect').onclick = function() {
+            addLog('Attempting to connect to ws://localhost:8000/ws/audio ...');
+            status.textContent = 'Status: Connecting...';
+            status.style.background = 'yellow';
+
+            try {
+                ws = new WebSocket('ws://localhost:8000/ws/audio');
+
+                ws.onopen = function(e) {
+                    addLog('SUCCESS: WebSocket connected!');
+                    status.textContent = 'Status: Connected';
+                    status.style.background = 'lightgreen';
+                };
+
+                ws.onmessage = function(e) {
+                    if (e.data instanceof Blob) {
+                        addLog('Received: Blob (' + e.data.size + ' bytes)');
+                    } else {
+                        addLog('Received: ' + e.data);
+                    }
+                };
+
+                ws.onerror = function(e) {
+                    addLog('ERROR: WebSocket error occurred');
+                    addLog('Error object: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+                    status.textContent = 'Status: Error';
+                    status.style.background = 'red';
+                };
+
+                ws.onclose = function(e) {
+                    addLog('WebSocket closed. Code: ' + e.code + ', Reason: ' + e.reason + ', Clean: ' + e.wasClean);
+                    status.textContent = 'Status: Disconnected';
+                    status.style.background = '#eee';
+                };
+            } catch (err) {
+                addLog('EXCEPTION: ' + err.message);
+                status.textContent = 'Status: Exception';
+                status.style.background = 'red';
+            }
+        };
+
+        document.getElementById('disconnect').onclick = function() {
+            if (ws) {
+                addLog('Closing connection...');
+                ws.close();
+            }
+        };
+    </script>
+</body>
+</html>
