@@ -59,6 +59,11 @@ def register_attachment_tools(llm) -> None:
         try:
             # First check attachment metadata to see if it's large
             metadata = await nylas.get_attachment_metadata(message_id, attachment_id)
+            logger.info(
+                ">>> Attachment metadata: "
+                f"filename={metadata.get('filename')}, "
+                f"content_type={metadata.get('content_type')}, size={metadata.get('size')}"
+            )
 
             # For large attachments, inform the user we're working on it
             if metadata["size"] > LARGE_ATTACHMENT_THRESHOLD:
@@ -72,6 +77,10 @@ def register_attachment_tools(llm) -> None:
 
             # Process the attachment
             processed = processor.process(data, content_type, filename)
+            logger.info(
+                ">>> Attachment processed: "
+                f"type={processed.get('type')}, content_type={content_type}, filename={filename}"
+            )
 
             if processed["type"] == "unsupported":
                 await params.result_callback(
