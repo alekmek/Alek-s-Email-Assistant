@@ -142,6 +142,24 @@ ensure_optional_env() {
   fi
 }
 
+ensure_anthropic_model() {
+  local default_model="claude-sonnet-4-20250514"
+  local current
+  current="$(get_env_value "ANTHROPIC_MODEL" | tr -d '\r' | xargs)"
+
+  if [ -z "$current" ]; then
+    set_env_value "ANTHROPIC_MODEL" "$default_model"
+    echo "Set ANTHROPIC_MODEL=$default_model"
+    return
+  fi
+
+  # Guard against accidental API key paste into model field.
+  if [[ "$current" == sk-ant-* ]]; then
+    echo "ANTHROPIC_MODEL looked like an API key; resetting to $default_model"
+    set_env_value "ANTHROPIC_MODEL" "$default_model"
+  fi
+}
+
 is_port_listening() {
   local port="$1"
   if command -v lsof >/dev/null 2>&1; then
@@ -193,7 +211,7 @@ open_url() {
 
 echo "==> Capturing API credentials..."
 ensure_required_env "ANTHROPIC_API_KEY" "Enter ANTHROPIC_API_KEY"
-ensure_optional_env "ANTHROPIC_MODEL" "Enter ANTHROPIC_MODEL"
+ensure_anthropic_model
 ensure_required_env "NYLAS_API_KEY" "Enter NYLAS_API_KEY"
 ensure_required_env "NYLAS_CLIENT_ID" "Enter NYLAS_CLIENT_ID"
 ensure_required_env "NYLAS_CLIENT_SECRET" "Enter NYLAS_CLIENT_SECRET"

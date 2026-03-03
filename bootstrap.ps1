@@ -127,6 +127,24 @@ function Ensure-OptionalEnv {
     }
 }
 
+function Ensure-AnthropicModel {
+    param([string]$Path)
+    $defaultModel = "claude-sonnet-4-20250514"
+    $current = (Get-EnvValue -Path $Path -Key "ANTHROPIC_MODEL").Trim()
+
+    if (-not $current) {
+        Set-EnvValue -Path $Path -Key "ANTHROPIC_MODEL" -Value $defaultModel
+        Write-Host "Set ANTHROPIC_MODEL=$defaultModel"
+        return
+    }
+
+    # Guard against accidental API key paste into model field.
+    if ($current -match '^sk-ant-') {
+        Write-Host "ANTHROPIC_MODEL looked like an API key; resetting to $defaultModel"
+        Set-EnvValue -Path $Path -Key "ANTHROPIC_MODEL" -Value $defaultModel
+    }
+}
+
 function Test-PortListening {
     param([int]$Port)
     try {
@@ -201,7 +219,7 @@ if (-not (Test-Path $backendEnvPath)) {
 
 Write-Host "==> Capturing API credentials..."
 Ensure-RequiredEnv -Path $backendEnvPath -Key "ANTHROPIC_API_KEY" -Prompt "Enter ANTHROPIC_API_KEY"
-Ensure-OptionalEnv -Path $backendEnvPath -Key "ANTHROPIC_MODEL" -Prompt "Enter ANTHROPIC_MODEL"
+Ensure-AnthropicModel -Path $backendEnvPath
 Ensure-RequiredEnv -Path $backendEnvPath -Key "NYLAS_API_KEY" -Prompt "Enter NYLAS_API_KEY"
 Ensure-RequiredEnv -Path $backendEnvPath -Key "NYLAS_CLIENT_ID" -Prompt "Enter NYLAS_CLIENT_ID"
 Ensure-RequiredEnv -Path $backendEnvPath -Key "NYLAS_CLIENT_SECRET" -Prompt "Enter NYLAS_CLIENT_SECRET"
