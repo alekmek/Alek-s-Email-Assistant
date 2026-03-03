@@ -122,6 +122,12 @@ bash ./bootstrap.sh
 ```
 
 This command creates the backend virtual environment, installs backend/frontend dependencies, and creates `backend/.env` from `.env.example` if missing.
+It then prompts for any missing API keys, starts backend + frontend, waits for readiness, and opens `http://localhost:5173`.
+
+Setup-only mode (skip starting services):
+
+- Windows: `.\bootstrap.ps1 -SetupOnly`
+- macOS/Linux: `bash ./bootstrap.sh --setup-only`
 
 ### Backend
 

@@ -62,9 +62,3 @@ terraform apply -var-file=terraform.tfvars
 ```
 
 4. Use output `alb_dns_name` as backend API base for frontend configuration.
-
-## Next step (optional)
-
-- Add HTTPS (ACM certificate + 443 listener + Route53 alias).
-- Add CloudFront in front of S3 frontend bucket.
-- Add autoscaling policies for ECS service.
