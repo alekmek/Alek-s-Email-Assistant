@@ -534,6 +534,58 @@ class NylasService:
 
         return result
 
+    def _coerce_attachment_bytes(self, payload: Any) -> bytes:
+        """Normalize attachment download payloads from different SDK return types."""
+        if payload is None:
+            raise TypeError("Attachment download returned None")
+
+        if isinstance(payload, bytes):
+            return payload
+        if isinstance(payload, bytearray):
+            return bytes(payload)
+        if isinstance(payload, memoryview):
+            return payload.tobytes()
+
+        # Common HTTP response objects (requests/httpx style)
+        content = getattr(payload, "content", None)
+        if isinstance(content, (bytes, bytearray, memoryview)):
+            return bytes(content)
+
+        # Some SDK wrappers return `.data`
+        data = getattr(payload, "data", None)
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            return bytes(data)
+
+        # File-like objects
+        read_fn = getattr(payload, "read", None)
+        if callable(read_fn):
+            read_data = read_fn()
+            if isinstance(read_data, (bytes, bytearray, memoryview)):
+                return bytes(read_data)
+
+        # Iterables for chunked payloads
+        iter_content_fn = getattr(payload, "iter_content", None)
+        if callable(iter_content_fn):
+            chunks = [chunk for chunk in iter_content_fn(chunk_size=65536) if chunk]
+            if chunks:
+                return b"".join(
+                    chunk if isinstance(chunk, (bytes, bytearray)) else bytes(chunk)
+                    for chunk in chunks
+                )
+
+        iter_bytes_fn = getattr(payload, "iter_bytes", None)
+        if callable(iter_bytes_fn):
+            chunks = [chunk for chunk in iter_bytes_fn() if chunk]
+            if chunks:
+                return b"".join(
+                    chunk if isinstance(chunk, (bytes, bytearray)) else bytes(chunk)
+                    for chunk in chunks
+                )
+
+        raise TypeError(
+            f"Unsupported attachment payload type: {type(payload).__name__}"
+        )
+
     async def get_attachment_metadata(self, message_id: str, attachment_id: str) -> dict:
         """Get attachment metadata."""
         logger.info(f"Getting attachment metadata for attachment_id={attachment_id}")
@@ -559,12 +611,17 @@ class NylasService:
         metadata = await self.get_attachment_metadata(message_id, attachment_id)
 
         # Download the attachment in a thread
-        attachment_data = await asyncio.to_thread(
+        attachment_payload = await asyncio.to_thread(
             lambda: self.client.attachments.download(
                 self.grant_id,
                 attachment_id,
                 query_params={"message_id": message_id},
             )
+        )
+        attachment_data = self._coerce_attachment_bytes(attachment_payload)
+        logger.info(
+            "Attachment payload normalized: "
+            f"payload_type={type(attachment_payload).__name__}, bytes={len(attachment_data)}"
         )
         logger.info("Attachment downloaded")
 
