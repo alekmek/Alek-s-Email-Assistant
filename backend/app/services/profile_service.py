@@ -89,7 +89,7 @@ class ProfileService:
             "nylas_api_key": env.nylas_api_key,
             "nylas_client_id": env.nylas_client_id,
             "nylas_client_secret": env.nylas_client_secret,
-            "nylas_grant_id": env.nylas_grant_id,
+            "nylas_grant_id": env.nylas_grant_id or env.nylas_sid,
             "deepgram_api_key": env.deepgram_api_key,
             "cartesia_api_key": env.cartesia_api_key,
         }

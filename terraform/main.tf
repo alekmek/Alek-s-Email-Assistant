@@ -34,6 +34,7 @@ locals {
     NYLAS_CLIENT_ID    = var.nylas_client_id
     NYLAS_CLIENT_SECRET = var.nylas_client_secret
     NYLAS_GRANT_ID     = var.nylas_grant_id
+    NYLAS_SID          = var.nylas_sid
     DEEPGRAM_API_KEY   = var.deepgram_api_key
     CARTESIA_API_KEY   = var.cartesia_api_key
   }

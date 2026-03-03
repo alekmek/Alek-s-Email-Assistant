@@ -33,6 +33,7 @@ Terraform creates one Secrets Manager secret per app credential and injects them
 - `NYLAS_CLIENT_ID`
 - `NYLAS_CLIENT_SECRET`
 - `NYLAS_GRANT_ID`
+- `NYLAS_SID` (optional alias)
 - `DEEPGRAM_API_KEY`
 - `CARTESIA_API_KEY`
 

@@ -123,6 +123,13 @@ variable "nylas_grant_id" {
   sensitive   = true
 }
 
+variable "nylas_sid" {
+  description = "Optional Nylas SID alias for grant identifier."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "deepgram_api_key" {
   description = "Deepgram API key."
   type        = string

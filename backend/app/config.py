@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     nylas_client_id: str = ""
     nylas_client_secret: str = ""
     nylas_grant_id: str = ""
+    nylas_sid: str = ""
 
     # Deepgram
     deepgram_api_key: str = ""

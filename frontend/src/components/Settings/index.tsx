@@ -17,7 +17,7 @@ const CREDENTIAL_LABELS: Record<keyof CredentialsUpdatePayload, string> = {
   nylas_api_key: 'Nylas API Key',
   nylas_client_id: 'Nylas Client ID',
   nylas_client_secret: 'Nylas Client Secret',
-  nylas_grant_id: 'Nylas Grant ID',
+  nylas_grant_id: 'Nylas Grant ID / SID',
   deepgram_api_key: 'Deepgram API Key',
   cartesia_api_key: 'Cartesia API Key',
 };

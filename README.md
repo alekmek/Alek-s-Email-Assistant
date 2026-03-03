@@ -150,12 +150,15 @@ NYLAS_API_KEY=
 NYLAS_CLIENT_ID=
 NYLAS_CLIENT_SECRET=
 NYLAS_GRANT_ID=
+NYLAS_SID=
 DEEPGRAM_API_KEY=
 CARTESIA_API_KEY=
 HOST=0.0.0.0
 PORT=8000
 FRONTEND_URL=http://localhost:5173
 ```
+
+`NYLAS_GRANT_ID` is primary. `NYLAS_SID` is accepted as a compatibility alias.
 
 Run backend:
 

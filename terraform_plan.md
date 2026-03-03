@@ -44,6 +44,7 @@ cp terraform.tfvars.example terraform.tfvars
 - Region/network sizing
 - Backend image URI (or use generated ECR repo + `latest`)
 - Provider keys/secrets
+- Nylas identifier using `nylas_grant_id` (or `nylas_sid` alias)
 - Frontend URL used by backend CORS
 
 3. Initialize and validate:
