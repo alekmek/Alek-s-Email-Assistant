@@ -105,6 +105,24 @@ Backend (FastAPI + Pipecat pipeline)
   - Deepgram
   - Cartesia
 
+### One-command bootstrap
+
+From repo root:
+
+- Windows (PowerShell):
+
+```powershell
+.\bootstrap.ps1
+```
+
+- macOS/Linux:
+
+```bash
+bash ./bootstrap.sh
+```
+
+This command creates the backend virtual environment, installs backend/frontend dependencies, and creates `backend/.env` from `.env.example` if missing.
+
 ### Backend
 
 ```bash
