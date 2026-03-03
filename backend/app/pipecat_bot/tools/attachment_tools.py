@@ -1,8 +1,5 @@
-import asyncio
-import json
-
 from loguru import logger
-from pipecat.frames.frames import TTSSpeakFrame, FunctionCallResultProperties
+from pipecat.frames.frames import FunctionCallResultProperties
 from pipecat.services.llm_service import FunctionCallParams
 
 from app.services.nylas_service import get_nylas_service
@@ -11,6 +8,21 @@ from app.services.attachment_processor import get_attachment_processor
 
 # Threshold for "large" attachments that need special handling (5MB)
 LARGE_ATTACHMENT_THRESHOLD = 5 * 1024 * 1024
+MAX_CONTEXT_ATTACHMENT_CHARS = 6000
+
+
+def _compact_text_for_context(value: str, max_chars: int = MAX_CONTEXT_ATTACHMENT_CHARS) -> tuple[str, bool]:
+    text = (value or "").strip()
+    if len(text) <= max_chars:
+        return text, False
+    head_chars = int(max_chars * 0.7)
+    tail_chars = max_chars - head_chars - len("\n\n[...truncated...]\n\n")
+    compact = (
+        f"{text[:head_chars]}"
+        f"\n\n[...truncated...]\n\n"
+        f"{text[-max(0, tail_chars):]}"
+    )
+    return compact, True
 
 
 def get_attachment_tools() -> list[dict]:
@@ -18,7 +30,7 @@ def get_attachment_tools() -> list[dict]:
     return [
         {
             "name": "read_attachment",
-            "description": "Download and analyze an email attachment. Can process PDFs, images, Word documents, Excel spreadsheets, and text files. Use this when the user asks about the contents of an attachment.",
+            "description": "Download and analyze an email attachment. Returns compact extracted text or metadata summary for PDFs, images, Word documents, Excel spreadsheets, and text files. Use this when the user asks about attachment contents.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -98,11 +110,18 @@ def register_attachment_tools(llm) -> None:
 
             # For text-based content, return it directly
             if processed["type"] == "text":
+                compact_content, truncated_for_context = _compact_text_for_context(
+                    processed["content"]
+                )
                 result = {
                     "status": "success",
                     "filename": filename,
                     "content_type": content_type,
-                    "content": processed["content"],
+                    "analysis_type": "text",
+                    "content_excerpt": compact_content,
+                    "truncated_for_context": truncated_for_context,
+                    "extracted_from": processed.get("extracted_from", "text"),
+                    "source_truncated": bool(processed.get("truncated", False)),
                 }
                 if question:
                     result["user_question"] = question
@@ -113,16 +132,19 @@ def register_attachment_tools(llm) -> None:
                 )
                 return
 
-            # For documents (PDF) and images, include structured payload
-            # for the model to analyze
-            if processed["type"] in ["document", "image"]:
-                # Return the processed content for model analysis.
+            # For image/document summaries, return compact metadata only.
+            if processed["type"] == "summary":
+                summary_text, truncated_for_context = _compact_text_for_context(
+                    processed.get("summary", "")
+                )
                 result = {
                     "status": "success",
                     "filename": filename,
                     "content_type": content_type,
-                    "analysis_type": processed["type"],
-                    "content": processed,
+                    "analysis_type": processed.get("analysis_type", "summary"),
+                    "summary": summary_text,
+                    "truncated_for_context": truncated_for_context,
+                    "metadata": processed.get("metadata", {}),
                 }
                 if question:
                     result["user_question"] = question

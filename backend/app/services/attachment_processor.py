@@ -1,4 +1,3 @@
-import base64
 import io
 import re
 from pathlib import Path
@@ -11,6 +10,8 @@ from PIL import Image
 
 class AttachmentProcessor:
     """Process email attachments for LLM analysis."""
+
+    MAX_TEXT_CHARS = 12000
 
     # Supported content types
     PDF_TYPES = ["application/pdf"]
@@ -53,13 +54,19 @@ class AttachmentProcessor:
     def _looks_like_pdf(self, data: bytes) -> bool:
         return data[:5] == b"%PDF-"
 
+    def _truncate_text(self, text: str, max_chars: int | None = None) -> tuple[str, bool]:
+        limit = max_chars or self.MAX_TEXT_CHARS
+        value = (text or "").strip()
+        if len(value) <= limit:
+            return value, False
+        return value[:limit], True
+
     def process(self, data: bytes, content_type: str, filename: str) -> dict:
         """
         Process attachment and return content suitable for the LLM.
 
         Returns a dict with either:
-        - {"type": "document", "source": {...}} for PDFs (native document input)
-        - {"type": "image", "source": {...}} for images (vision input)
+        - {"type": "summary", ...} for image/document metadata summaries
         - {"type": "text", "content": "..."} for extracted text
         """
         normalized_type = self._normalize_content_type(content_type)
@@ -102,11 +109,13 @@ class AttachmentProcessor:
             }
 
     def _process_pdf(self, data: bytes, filename: str) -> dict:
-        """Process PDF for model analysis, with text extraction fallback first."""
+        """Process PDF with text extraction; otherwise return compact metadata summary."""
+        page_count: int | None = None
         try:
             from pypdf import PdfReader
 
             reader = PdfReader(io.BytesIO(data))
+            page_count = len(reader.pages)
             page_text: list[str] = []
             for page in reader.pages:
                 extracted = (page.extract_text() or "").strip()
@@ -115,38 +124,77 @@ class AttachmentProcessor:
 
             if page_text:
                 combined = "\n\n".join(page_text).strip()
-                max_chars = 20000
-                truncated = len(combined) > max_chars
-                if truncated:
-                    combined = combined[:max_chars]
+                combined, truncated = self._truncate_text(combined)
 
                 return {
                     "type": "text",
                     "content": f"Content of {filename}:\n\n{combined}",
                     "extracted_from": "pdf",
                     "truncated": truncated,
+                    "page_count": page_count,
                 }
         except Exception:
-            # Fall back to native PDF input if text extraction is unavailable/failed.
+            # Fall back to metadata summary if extraction is unavailable/failed.
             pass
 
         return {
-            "type": "document",
-            "source": {
-                "type": "base64",
-                "media_type": "application/pdf",
-                "data": base64.b64encode(data).decode("utf-8"),
+            "type": "summary",
+            "analysis_type": "document",
+            "summary": (
+                f"PDF attachment '{filename}' has no extractable text content. "
+                f"Page count: {page_count if page_count is not None else 'unknown'}."
+            ),
+            "metadata": {
+                "filename": filename,
+                "page_count": page_count,
             },
         }
 
     def _process_image(self, data: bytes, content_type: str) -> dict:
-        """Process image for vision input."""
+        """Return a compact image metadata summary (without raw binary payload)."""
+        width = None
+        height = None
+        mode = None
+        image_format = None
+        frames = None
+        is_animated = False
+        error = None
+
+        try:
+            with Image.open(io.BytesIO(data)) as image:
+                width, height = image.size
+                mode = image.mode
+                image_format = image.format
+                frames = getattr(image, "n_frames", 1)
+                is_animated = bool(frames and frames > 1)
+        except Exception as exc:
+            error = str(exc)
+
+        if error:
+            summary = (
+                "Image attachment was downloaded, but metadata extraction failed. "
+                "The file may be corrupted or unsupported."
+            )
+        else:
+            summary = (
+                f"Image attachment metadata: format={image_format or 'unknown'}, "
+                f"size={width}x{height}, mode={mode or 'unknown'}, "
+                f"animated={'yes' if is_animated else 'no'}."
+            )
+
         return {
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": content_type,
-                "data": base64.b64encode(data).decode("utf-8"),
+            "type": "summary",
+            "analysis_type": "image",
+            "summary": summary,
+            "metadata": {
+                "content_type": content_type,
+                "width": width,
+                "height": height,
+                "mode": mode,
+                "format": image_format,
+                "frames": frames,
+                "animated": is_animated,
+                "metadata_error": error,
             },
         }
 
@@ -156,9 +204,11 @@ class AttachmentProcessor:
             doc = Document(io.BytesIO(data))
             paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
             text = "\n\n".join(paragraphs)
+            text, truncated = self._truncate_text(text)
             return {
                 "type": "text",
                 "content": f"Content of {filename}:\n\n{text}",
+                "truncated": truncated,
             }
         except Exception as e:
             return {
@@ -187,9 +237,11 @@ class AttachmentProcessor:
 
                 result_parts.append("\n".join(rows))
 
+            text, truncated = self._truncate_text("\n".join(result_parts))
             return {
                 "type": "text",
-                "content": "\n".join(result_parts),
+                "content": text,
+                "truncated": truncated,
             }
         except Exception as e:
             return {
@@ -201,16 +253,20 @@ class AttachmentProcessor:
         """Process plain text files."""
         try:
             text = data.decode("utf-8")
+            text, truncated = self._truncate_text(text)
             return {
                 "type": "text",
                 "content": f"Content of {filename}:\n\n{text}",
+                "truncated": truncated,
             }
         except UnicodeDecodeError:
             try:
                 text = data.decode("latin-1")
+                text, truncated = self._truncate_text(text)
                 return {
                     "type": "text",
                     "content": f"Content of {filename}:\n\n{text}",
+                    "truncated": truncated,
                 }
             except Exception as e:
                 return {
